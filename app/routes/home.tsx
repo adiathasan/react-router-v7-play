@@ -8,10 +8,16 @@ export function meta({}: Route.MetaArgs) {
 
 export async function action({ request }: Route.ActionArgs) {
 	const formData: FormData = await request.formData();
-	const { age, isOld, name } = homeFormModule.schema.parse(formData);
+	const { error, data } = homeFormModule.safeParse(formData);
+
+	if (!data) {
+		return { error: error?.message };
+	}
+
+	const { name, age, isOld, fitness } = data;
 
 	if (name && age) {
-		const message = `Hello ${name}, you are ${age} years old.`;
+		const message = `Hello ${name}, you are ${age} years old. I'm ${fitness}.`;
 		if (isOld) {
 			return { message: `${message} You are old!` };
 		}
@@ -42,16 +48,43 @@ export default function Home({ actionData }: Route.ComponentProps) {
 					/>
 					<div className='flex items-center gap-2 mb-4'>
 						<input
-							id='isOld'
+							id={homeFormModule.keys.isOld}
 							type='checkbox'
+							value='true'
+							defaultChecked
 							name={homeFormModule.keys.isOld}
 							className='border border-gray-300 rounded-lg p-2'
 						/>
-						<label htmlFor='isOld'>Are you old?</label>
+						<label htmlFor={homeFormModule.keys.isOld}>Are you old?</label>
+					</div>
+					<div className='flex items-center gap-2 mb-4'>
+						<input
+							defaultChecked
+							id='fit'
+							type='radio'
+							name={homeFormModule.keys.fitness}
+							value='fit'
+							className='border border-gray-300 rounded-lg p-2'
+						/>
+						<label htmlFor='fit'>Fit</label>
+						<input
+							id='not-fit'
+							type='radio'
+							name={homeFormModule.keys.fitness}
+							value='not-fit'
+							className='border border-gray-300 rounded-lg p-2'
+						/>
+						<label htmlFor='not-fit'>Not-fit</label>
 					</div>
 					<button type='submit' className='bg-blue-500 text-white rounded-lg p-2 px-4 hover:bg-blue-600'>
 						Submit
 					</button>
+					{actionData?.error && (
+						<div className='mt-4 text-center'>
+							<p className='text-red-500'>{actionData.error}</p>
+						</div>
+					)}
+
 					{actionData?.message && (
 						<div className='mt-4 text-center'>
 							<p className='text-green-500'>{actionData.message}</p>

@@ -1,4 +1,4 @@
-import { z, ZodObject, type ZodRawShape, type ZodSchema } from 'zod';
+import { z, ZodObject, type ZodRawShape } from 'zod';
 
 export type CreateFormModuleSchema<T extends ZodRawShape> = ZodObject<T>;
 
@@ -7,13 +7,35 @@ export const createFormModule = <T extends ZodRawShape>(schema: CreateFormModule
 		[K in keyof z.infer<typeof schema>]: string;
 	};
 
-	for (const item of Object.keys(schema.keyof().options)) {
-		const key = item as keyof z.infer<typeof schema>;
-		keys[key] = item;
+	for (const key of [...schema.keyof().options]) {
+		Object.assign(keys, {
+			[`${key as string}`]: key,
+		});
 	}
 
 	return {
 		keys,
-		schema,
+		safeParse: (formData: FormData) => {
+			const parsedData = {} as Record<string, unknown>;
+			for (const key of Object.keys(keys)) {
+				const value = formData.get(key);
+
+				if (value !== null || value !== undefined) {
+					parsedData[key] = value;
+				}
+			}
+
+			const { data, success, error } = schema.safeParse(parsedData) as z.infer<typeof schema>;
+
+			return {
+				data,
+				success,
+				error,
+			} as {
+				data: z.infer<typeof schema> | null;
+				success: boolean;
+				error: z.ZodError | null;
+			};
+		},
 	};
 };
